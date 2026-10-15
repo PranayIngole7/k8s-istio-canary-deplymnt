@@ -12,4 +12,5 @@ EXPOSE 8080
 ENV APP_VERSION=1.0
 ENV DEPLOYMENT_TIER=Stable
 
+# run python stable.py
 CMD ["python", "stable.py"]
