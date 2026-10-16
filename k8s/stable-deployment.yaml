@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: stable-app
+  labels:
+    app: canary-demo
+    version: v1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: canary-demo
+      version: v1
+  template:
+    metadata:
+      labels:
+        app: canary-demo
+        version: v1
+    spec:
+      containers:
+        - name: stable-app
+          image: canary-demo:v1.0
+          imagePullPolicy: Never
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: APP_VERSION
+              value: "1.0"
+            - name: DEPLOYMENT_TIER
+              value: "Stable"
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: 100m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 128Mi
