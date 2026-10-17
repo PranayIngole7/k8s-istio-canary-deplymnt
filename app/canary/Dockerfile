@@ -5,11 +5,11 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY stable.py .
+COPY app.py .
 
 EXPOSE 8080
 
-ENV APP_VERSION=1.0
-ENV DEPLOYMENT_TIER=Stable
+ENV APP_VERSION=2.0
+ENV DEPLOYMENT_TIER=Canary
 
-CMD ["python", "stable.py"]
+CMD ["python", "app.py"]
