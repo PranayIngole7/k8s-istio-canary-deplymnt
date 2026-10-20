@@ -62,14 +62,14 @@ Both applications expose `/healthz` on port 8080.
 The application and traffic-management resources are deployed in the
 `canary-demo` namespace.
 
-| Resource | Name | Purpose |
-| --- | --- | --- |
-| Deployment | `stable-app` | Runs stable version 1.0 |
-| Deployment | `canary-app` | Runs canary version 2.0 |
-| Service | `stable-service` | Provides direct internal access to stable Pods |
-| Service | `canary-service` | Selects both stable and canary Pods for mesh routing |
-| DestinationRule | `canary-destination` | Defines the `stable` (v1) and `canary` (v2) subsets |
-| VirtualService | `canary-routing` | Routes 80% of traffic to stable and 20% to canary |
+| Resource        | Name                 | Purpose                                              |
+| --------------- | -------------------- | ---------------------------------------------------- |
+| Deployment      | `stable-app`         | Runs stable version 1.0                              |
+| Deployment      | `canary-app`         | Runs canary version 2.0                              |
+| Service         | `stable-service`     | Provides direct internal access to stable Pods       |
+| Service         | `canary-service`     | Selects both stable and canary Pods for mesh routing |
+| DestinationRule | `canary-destination` | Defines the `stable` (v1) and `canary` (v2) subsets  |
+| VirtualService  | `canary-routing`     | Routes 80% of traffic to stable and 20% to canary    |
 
 The weighted routing policy applies to requests routed through the Istio mesh
 to `canary-service.canary-demo.svc.cluster.local`. Direct requests or
@@ -81,11 +81,11 @@ a specific version, but do not by themselves verify the weighted traffic split.
 A test sent 100 HTTP requests from the stable application Pod to the shared
 Service through the mesh. The observed results were:
 
-| Result | Requests | Observed share |
-| --- | ---: | ---: |
-| Stable v1.0 | 78 | 78% |
-| Canary v2.0 | 22 | 22% |
-| Errors | 0 | 0% |
+| Result      | Requests | Observed share |
+| ----------- | -------: | -------------: |
+| Stable v1.0 |       78 |            78% |
+| Canary v2.0 |       22 |            22% |
+| Errors      |        0 |             0% |
 
 The result is consistent with the configured 80/20 weighted split. Since
 routing is probabilistic, a finite sample is not expected to match the
@@ -203,3 +203,27 @@ Stop each port-forward with Ctrl+C when testing is complete.
 - Rollback procedure returning traffic to 100% stable.
 - Final project report of no more than two pages, covering the introduction,
   abstract, tools, implementation steps, and conclusion.
+
+## Traffic Distribution Verification
+
+Istio weighted routing was verified from inside the service mesh using
+requests to `canary-service.canary-demo.svc.cluster.local`.
+
+| Test              | Total Requests | Stable v1.0 | Canary v2.0 | Errors |
+| ----------------- | -------------: | ----------: | ----------: | -----: |
+| Initial test      |            100 |    78 (78%) |    22 (22%) |      0 |
+| Verification test |            200 | 159 (79.5%) |  41 (20.5%) |      0 |
+
+Both tests returned no unknown responses or request errors in the
+reported results. The observed distribution is consistent with the
+configured 80% stable / 20% canary traffic weights.
+
+Additional validation:
+- Both application Pods were `2/2 Running`.
+- `istioctl analyze -n canary-demo` reported no validation issues.
+- Envoy route configuration included `canary-routing.canary-demo`.
+- Envoy destination clusters included the stable and canary subsets.
+
+These tests provide evidence that weighted routing is working. The
+observed percentages are sample results and are not guaranteed for
+every request batch.
