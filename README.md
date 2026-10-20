@@ -29,21 +29,24 @@ infrastructure.
 - Created a ClusterIP Service for the stable application.
 - Installed Istio 1.31.2 using the minimal profile.
 - Enabled automatic Istio sidecar injection in the `canary-demo` namespace.
-- Verified that both application Pods are running with their Istio sidecars.
 - Verified both application health endpoints return HTTP 200.
 - Confirmed that both Envoy proxies are connected to the Istio control plane.
+- Created a shared `canary-service` selecting both application versions.
+- Configured a DestinationRule with `stable` (v1) and `canary` (v2) subsets.
+- Configured a VirtualService with an 80% stable / 20% canary traffic split.
 - Ran `istioctl analyze` successfully with no validation issues.
+- Tested 100 requests from an application Pod inside the mesh: 78 stable
+  responses, 22 canary responses, and zero errors.
 - Removed the previous application deployments and Service from the `default`
   namespace after verifying the new deployments.
 
 ### Remaining Work
 
-- Configure Istio Gateway and traffic-routing resources.
-- Route requests to the stable and canary versions through a shared Service.
-- Implement and verify an 80% stable / 20% canary traffic split.
-- Observe traffic distribution and application behavior.
+- Configure and validate an Istio Gateway if needed for external access.
+- Perform further traffic-distribution and application-behavior checks.
 - Test rollback to 100% stable traffic.
-- Document the final deployment and testing results.
+- Document the final deployment, testing results, and rollback procedure.
+- Complete the final project report of no more than two pages.
 
 ## Application Versions
 
@@ -54,19 +57,39 @@ infrastructure.
 
 Both applications expose `/healthz` on port 8080.
 
-## Kubernetes Resources
+## Kubernetes and Istio Resources
 
-The application resources are deployed in the `canary-demo` namespace.
+The application and traffic-management resources are deployed in the
+`canary-demo` namespace.
 
-| Resource   | Name             | Purpose                                 |
-| ---------- | ---------------- | --------------------------------------- |
-| Deployment | `stable-app`     | Runs stable version 1.0                 |
-| Deployment | `canary-app`     | Runs canary version 2.0                 |
-| Service    | `stable-service` | Provides internal access to stable Pods |
+| Resource | Name | Purpose |
+| --- | --- | --- |
+| Deployment | `stable-app` | Runs stable version 1.0 |
+| Deployment | `canary-app` | Runs canary version 2.0 |
+| Service | `stable-service` | Provides direct internal access to stable Pods |
+| Service | `canary-service` | Selects both stable and canary Pods for mesh routing |
+| DestinationRule | `canary-destination` | Defines the `stable` (v1) and `canary` (v2) subsets |
+| VirtualService | `canary-routing` | Routes 80% of traffic to stable and 20% to canary |
 
-The stable Service currently selects the stable Pods only. Shared-service
-routing and version-based traffic splitting will be configured in the
-Istio traffic-management phase.
+The weighted routing policy applies to requests routed through the Istio mesh
+to `canary-service.canary-demo.svc.cluster.local`. Direct requests or
+port-forwards to individual application Deployments are useful for checking
+a specific version, but do not by themselves verify the weighted traffic split.
+
+### Traffic-split verification
+
+A test sent 100 HTTP requests from the stable application Pod to the shared
+Service through the mesh. The observed results were:
+
+| Result | Requests | Observed share |
+| --- | ---: | ---: |
+| Stable v1.0 | 78 | 78% |
+| Canary v2.0 | 22 | 22% |
+| Errors | 0 | 0% |
+
+The result is consistent with the configured 80/20 weighted split. Since
+routing is probabilistic, a finite sample is not expected to match the
+configured percentages exactly.
 
 ## Build Application Images
 
