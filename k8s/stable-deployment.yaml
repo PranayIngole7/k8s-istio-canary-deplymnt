@@ -1,6 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
+  namespace: canary-demo
   name: stable-app
   labels:
     app: canary-demo
