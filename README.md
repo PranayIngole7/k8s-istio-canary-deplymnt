@@ -260,3 +260,45 @@ kubectl apply -f k8s/istio/virtual-service.yaml
 
 The rollback test passed. The original 80/20 routing configuration
 was subsequently restored.
+
+## Istio Ingress Gateway Verification
+
+The application is exposed through an Istio HTTP Gateway using the host
+`canary-demo.local`. On local Minikube, access it through port-forwarding
+to the ingress gateway Service.
+
+### Start local Gateway access
+
+Run this command in a dedicated terminal and leave it running:
+
+```bash
+kubectl port-forward -n istio-system svc/istio-ingressgateway 18080:80
+```
+Test the application health endpoint from another terminal:
+```bash
+curl -i --max-time 5 -H 'Host: canary-demo.local' \
+  http://127.0.0.1:18080/healthz
+```
+The health check returned HTTP 200 through the Istio ingress Gateway.
+Gateway traffic distribution
+The VirtualService references both mesh and canary-gateway and
+routes traffic through the canary-service DestinationRule subsets.
+
+A 100-request test through the ingress Gateway produced:
+| Metric                  | Result |
+| ----------------------- | -----: |
+| Total requests          |    100 |
+| Stable v1.0 responses   |     81 |
+| Canary v2.0 responses   |     19 |
+| Unknown responses       |      0 |
+| Errors                  |      0 |
+| Observed Stable traffic |  81.0% |
+| Observed Canary traffic |  19.0% |
+
+The observed distribution is consistent with the configured 80/20
+weights for this sample. Actual percentages can vary between batches.
+
+Istio validation completed with no configuration issues:
+```bash
+~/istio-1.31.2/bin/istioctl analyze -n canary-demo
+```

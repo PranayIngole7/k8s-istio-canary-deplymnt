@@ -6,6 +6,10 @@ metadata:
 spec:
   hosts:
     - canary-service.canary-demo.svc.cluster.local
+    - canary-demo.local
+  gateways:
+    - mesh
+    - canary-gateway
   http:
     - route:
         - destination:
