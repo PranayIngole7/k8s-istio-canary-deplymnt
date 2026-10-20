@@ -227,3 +227,36 @@ Additional validation:
 These tests provide evidence that weighted routing is working. The
 observed percentages are sample results and are not guaranteed for
 every request batch.
+
+## Canary Rollback Verification
+
+A separate rollback manifest is provided at
+`k8s/istio/virtual-service-rollback.yaml`.
+
+To direct all traffic to the stable version:
+
+```bash
+kubectl apply -f k8s/istio/virtual-service-rollback.yaml
+```
+The rollback configuration routes 100% of requests to the stable
+subset. Both application deployments remain deployed; only the
+VirtualService routing policy changes.
+
+| Metric                | Result |
+| --------------------- | -----: |
+| Requests sent         |    100 |
+| Stable v1.0 responses |    100 |
+| Canary v2.0 responses |      0 |
+| Unknown responses     |      0 |
+| Errors                |      0 |
+
+Istio analysis reported no validation issues after applying the
+rollback configuration.
+
+To restore the canary demonstration's original 80/20 split:
+```bash
+kubectl apply -f k8s/istio/virtual-service.yaml
+```
+
+The rollback test passed. The original 80/20 routing configuration
+was subsequently restored.
