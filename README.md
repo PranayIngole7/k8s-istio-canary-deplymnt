@@ -302,3 +302,61 @@ Istio validation completed with no configuration issues:
 ```bash
 ~/istio-1.31.2/bin/istioctl analyze -n canary-demo
 ```
+
+## Traffic Distribution Scenario Testing
+
+Traffic distribution scenarios were tested through the Istio ingress Gateway
+using `scripts/test-distribution.sh`. Each scenario sent 100 requests to the
+application through `http://127.0.0.1:18080/` with the host
+`canary-demo.local`.
+
+### Scenario manifests
+
+| Manifest                                    | Stable weight | Canary weight | Purpose                     |
+| ------------------------------------------- | ------------: | ------------: | --------------------------- |
+| `k8s/istio/virtual-service.yaml`            |           80% |           20% | Canonical baseline          |
+| `k8s/istio/virtual-service-50-50.yaml`      |           50% |           50% | Balanced traffic test       |
+| `k8s/istio/virtual-service-100-canary.yaml` |            0% |          100% | Route all traffic to canary |
+| `k8s/istio/virtual-service-rollback.yaml`   |          100% |            0% | Roll back traffic to stable |
+
+All scenario manifests configure both `mesh` and `canary-gateway`, so the
+weights apply to internal mesh routing and the configured ingress Gateway.
+
+### Observed results
+
+| Scenario                  | Stable responses | Canary responses | Unknown | Errors |
+| ------------------------- | ---------------: | ---------------: | ------: | -----: |
+| Stable rollback (100/0)   |              100 |                0 |       0 |      0 |
+| Balanced (50/50)          |               50 |               50 |       0 |      0 |
+| Canary-only (0/100)       |                0 |              100 |       0 |      0 |
+| Restored baseline (80/20) |               78 |               22 |       0 |      0 |
+
+The final baseline test confirmed that the canonical 80/20 configuration
+was restored. Observed percentages can vary between request batches.
+
+### Run a distribution test
+
+Ensure the ingress Gateway port-forward is running in a separate terminal:
+
+```bash
+kubectl port-forward -n istio-system svc/istio-ingressgateway 18080:80
+```
+
+Then run:
+```bash
+./scripts/test-distribution.sh 100
+```
+
+The script reports stable, canary, unknown, and error counts and writes a
+timestamped report under `reports/`. Generated reports are local test
+artifacts and are excluded from version control.
+
+To apply a scenario manually, use the appropriate manifest, for example:
+```bash
+kubectl apply -f k8s/istio/virtual-service-50-50.yaml
+```
+
+After scenario testing, restore the baseline:
+```bash
+kubectl apply -f k8s/istio/virtual-service.yaml
+```
