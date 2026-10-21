@@ -16,13 +16,24 @@ flowchart TD
     U[HTTP Client] --> G[Istio Ingress Gateway]
     G --> V[VirtualService]
     V --> D[DestinationRule]
-    D --> S[Stable v1.0]
-    D --> C[Canary v2.0]
-    S -. telemetry .-> P[Prometheus]
-    C -. telemetry .-> P
+    D -->|80% default traffic| S[Stable Flask v1.0]
+    D -->|20% default traffic| C[Canary Flask v2.0]
+
+    P[Prometheus] -.->|Scrapes Envoy metrics| G
+    P -.->|Scrapes sidecar metrics| S
+    P -.->|Scrapes sidecar metrics| C
 ```
-The application runs locally in Minikube. Istio routes requests between
-the two versions, while Prometheus collects Istio telemetry.
+
+The application runs locally in Minikube. Istio routes incoming requests
+between the stable and canary versions according to the VirtualService
+configuration.
+
+Prometheus collects Istio and Envoy metrics by scraping configured metrics
+endpoints. The dotted arrows represent monitoring, not application request
+traffic.
+
+The default routing configuration sends 80% of requests to stable v1.0
+and 20% to canary v2.0. The rollback configuration sends 100% to stable v1.0.
 
 ## Technology Stack and Tools
 
