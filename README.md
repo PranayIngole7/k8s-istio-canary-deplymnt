@@ -2,12 +2,16 @@
 
 A DevOps project demonstrating **canary releases, weighted traffic routing, and rollback** using Kubernetes, Minikube, and Istio.
 
+---
+
 ## Objectives
 
 - Deploy stable v1.0 and canary v2.0 versions of a Flask application.
 - Control traffic distribution using Istio.
 - Test multiple traffic-splitting strategies.
 - Verify application health and roll back traffic safely.
+
+---
 
 ## Architecture
 
@@ -35,6 +39,8 @@ traffic.
 The default routing configuration sends 80% of requests to stable v1.0
 and 20% to canary v2.0. The rollback configuration sends 100% to stable v1.0.
 
+---
+
 ## Technology Stack and Tools
 
 | Category           | Technologies                  |
@@ -46,6 +52,8 @@ and 20% to canary v2.0. The rollback configuration sends 100% to stable v1.0.
 | Monitoring         | Prometheus, Grafana           |
 | Scripting          | Bash, Python                  |
 
+---
+
 ## Key Features
 
 - Separate Kubernetes Deployments for stable and canary versions.
@@ -54,6 +62,8 @@ and 20% to canary v2.0. The rollback configuration sends 100% to stable v1.0.
 - Automated HTTP traffic testing and response counts.
 - Health probes and configuration validation.
 - Rollback to stable v1.0 without removing the canary Deployment.
+
+---
 
 ## Verified Results
 
@@ -76,6 +86,8 @@ Finite samples may differ from configured weights.
 Prometheus telemetry collection was verified. Grafana is installed, but
 dashboard visualization was not validated.
 
+---
+
 ## Screenshots
 
 **Stable application — v1.0**
@@ -89,6 +101,8 @@ dashboard visualization was not validated.
 ![Istio Gateway validation](screenshots/istio-gateway-validation.png)
 
 ![Rollback validation](screenshots/canary-rollback-validation.png)
+
+---
 
 ## How to Run
 
@@ -172,16 +186,59 @@ Restore the 80/20 demonstration configuration when needed:
 kubectl apply -f k8s/istio/virtual-service.yaml
 ```
 
+---
+
+## Canary Performance Evaluation
+
+`scripts/evaluate-canary.py` evaluates Prometheus request counts, HTTP 5xx
+errors, and p95 latency to recommend whether the canary meets configured
+performance thresholds. It also checks the current Istio routing weights.
+
+- Minimum canary requests: 50
+- Maximum 5xx error rate: 1%
+- Maximum p95 latency: 500 ms
+- Maximum canary-to-stable p95 latency ratio: 1.5x
+- Evaluation window: 5 minutes
+
+Ensure Prometheus is accessible at `http://127.0.0.1:19090`. If needed,
+start a port-forward in a separate terminal:
+
+```bash
+kubectl port-forward -n monitoring service/prometheus-server 19090:80
+```
+
+Run the evaluator:
+
+```bash
+python3 scripts/evaluate-canary.py
+```
+Run its tests:
+```bash
+python3 -m unittest discover -s tests -p "test_evaluate_canary.py" -v
+```
+
+The evaluator requires accessible Prometheus telemetry and active canary
+traffic. It provides recommendations only; it does not automatically promote
+or roll back the canary. Thresholds are demonstration defaults, not production
+SLOs.
+
+---
+
 ## Repository Structure
 
 - `app/` — stable and canary Flask applications.
 - `k8s/` — Kubernetes Deployments, Services, and Istio manifests.
-- `scripts/` — traffic generation and distribution tests.
+- `scripts/` — traffic generation, distribution tests, and Prometheus-based canary evaluation.
+- `tests/` — automated tests for evaluator decision logic.
 - `screenshots/` — application and validation screenshots.
 - `reports/` — local traffic-test reports.
 
+---
+
 ## Scope
 
-This project demonstrates progressive delivery in a local Kubernetes
-environment. Cloud deployment and production-grade high availability
-are outside its current scope.
+This project demonstrates progressive delivery and metrics-based canary
+evaluation in a local Kubernetes environment. Cloud deployment and
+production-grade high availability are outside its current scope.
+
+---
