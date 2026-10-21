@@ -27,7 +27,7 @@ the two versions, while Prometheus collects Istio telemetry.
 ## Technology Stack and Tools
 
 | Category           | Technologies                  |
-| | - |
+| ------------------ | ----------------------------- |
 | Application        | Python, Flask                 |
 | Containers         | Docker                        |
 | Orchestration      | Kubernetes, Minikube, kubectl |
